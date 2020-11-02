@@ -1,7 +1,7 @@
 // 单独的创建一个中间件，然后在app.js中注册使用
 const jwt = require('jsonwebtoken');
 const utils = require('../utils');
-const noCheckLogin = ['/users/login'];
+const noCheckLogin = ['/users/login','/users/registered'];
 async function check(ctx, next) {
     let url = ctx.url.split('?')[0];
     if (noCheckLogin.includes(url)) {
@@ -24,8 +24,7 @@ async function check(ctx, next) {
             } else {
                 ctx.body = utils.formatData({
                     status: 405
-                }, false, 'token 已过期，请重新登陆')
-            }
+1            }
         } else {
             ctx.body = utils.formatData({
                 status: 405
