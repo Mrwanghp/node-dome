@@ -44,22 +44,22 @@ router.post('/login',  async (ctx, next)  => {
 })
 //注册
 router.post('/registered',  async (ctx, next) =>{
-  const { username, password, secretSecurity } = ctx.request.body;
-  try {
-    // 插入账号密码
-    {
-      let { result } = await mongodb.godb('userInfo');
-      await mongodb.inser(result,'insertOne',{username,password})
-    }
-    // 插入问题与答案
-    {
-      let { result, db } = await mongodb.godb('querstion');
-      await mongodb.inser(result,'insertMany',secretSecurity.map(v => ({ ...v, username} )));
+  try{
+    const { username, password, secretSecurity } = ctx.request.body;
+    const user =  await findDataTable('userInfo');
+    const flag = user.some(item => item.username === username); //查重
+    if (!flag) {
+      const { result: userInfo} = await mongodb.godb('userInfo'); //user表
+      await mongodb.inser(userInfo,'insertOne',{ username, password});
+      const { result: querstion, db } = await mongodb.godb('querstion'); //问题表
+      await mongodb.inser(querstion,'insertMany',secretSecurity.map(v => ({ ...v, username} )));
+      ctx.body = utils.formatData({}, true, '注册成功');
       db.close();
+    } else {
+      ctx.body = utils.formatData({}, false, '账号名重复');
     }
-    ctx.body = utils.formatData({}, true, '注册成功')
-  } catch(e) {
-    throw e
+  } catch(err) {
+    ctx.body = err
   }
 })
 //找回密码--查询问题

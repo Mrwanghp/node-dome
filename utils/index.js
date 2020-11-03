@@ -5,7 +5,7 @@ const formatData =  (data, state, message = '请求成功') => {
 }
 class dbtools{
     constructor(library) {
-      this.url = ''
+      this.url = 'mongodb://localhost:27017/'
       this.library = library
     }
     godb(table) {
