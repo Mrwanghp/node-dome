@@ -5,12 +5,12 @@ const router = require('koa-router')()
 // } = require('../mocks/login')
 const utils = require('../utils')
 const jwt = require('jsonwebtoken')
-var MongoClient = require('mongodb').MongoClient;
-var url = "mongodb://47.100.200.134:27017/";
+const MongoClient = require('mongodb').MongoClient;
+const mongodb = new utils.dbtools('mongodb://47.100.200.134:27017/','DEMO')
 router.prefix('/users')
 const findDataTable =  (library,table)  => {
   return new Promise((resolve, reject) => {
-    MongoClient.connect(url, { useNewUrlParser: true, useUnifiedTopology: true }, (err, db) => {
+    MongoClient.connect('mongodb://47.100.200.134:27017/', { useNewUrlParser: true, useUnifiedTopology: true }, (err, db) => {
       if (err) reject (err);
       var dbo = db.db(library);
       dbo.collection(table).find().toArray((err, result) => {
@@ -21,36 +21,16 @@ const findDataTable =  (library,table)  => {
     });
   })
 }
-// const insertDataTable =  (library, table, data)  => {
-//   return new Promise((resolve, reject) => {
-//     MongoClient.connect(url, { useNewUrlParser: true, useUnifiedTopology: true }, (err, db) => {
-//       if (err) reject (err);
-//       var dbo = db.db(library);
-//       dbo.collection(table).insertMany(data,(err, result) => {
-//           if (err) reject(err);
-//           resolve(result)
-//           db.close();
-//       });
-//     });
-//   })
-// }
-class dbtools{
-  constructor(url,library) {
-    this.url = url
-    this.library = library
-  }
-   godb(cb) {
-      MongoClient.connect(this.url, { useNewUrlParser: true, useUnifiedTopology: true }, async (err, db) =>  {
-        if (err) throw (err);
-        await cb(db.db(this.library).collection('userInfo'))
-        db.close();
-      })
-  }
-  insertMany() {
-
-  }
+// 同步插入方法
+const inser = async (result,theWay, data) => {
+  return new Promise((resolve, reject)=> {
+    result[theWay](data,(err,res)=>{
+      if (err) reject (err);
+      console.log(11)
+      resolve()
+    })
+  })
 }
-let db = new dbtools('mongodb://47.100.200.134:27017/','DEMO')
 router.post('/login',  async (ctx, next)  => {
   let body;
   const { username, password } = ctx.request.body;
@@ -79,20 +59,21 @@ router.post('/login',  async (ctx, next)  => {
 })
 router.post('/registered',  async (ctx, next) =>{
   const { username, password,secretSecurity } = ctx.request.body;
-  db.godb((e)=>{
-        e.find().toArray((err, result) => {
-          if (err) throw (err);
-          console.log(result)
-      })
-  })
-  // let dbs = await db.godb()
-//   console.log(dbs)
-//   e.collection('userInfo').find().toArray((err, result) => {
-//     if (err) throw (err);
-//     console.log(result)
-//     // db.db.close();
-// });
-  // console.log(username, password,secretSecurity)
-  // insertDataTable('DEMO','userInfo')
+  try {
+    // 插入账号密码
+    {
+      let { result } = await mongodb.godb('userInfo');
+      await inser(result,'insertOne',{username,password})
+    }
+    // 插入问题与答案
+    {
+      let { result, db } = await mongodb.godb('querstion');
+      await inser(result,'insertMany',secretSecurity);
+      db.close();
+    }
+    ctx.body = utils.formatData({}, true, '注册成功')
+  } catch(e) {
+    throw e
+  }
 })
 module.exports = router

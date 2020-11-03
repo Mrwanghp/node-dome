@@ -24,7 +24,8 @@ async function check(ctx, next) {
             } else {
                 ctx.body = utils.formatData({
                     status: 405
-1            }
+                }, false, 'token 已过期，请重新登陆')
+            }
         } else {
             ctx.body = utils.formatData({
                 status: 405
