@@ -1,8 +1,11 @@
 
 const MongoClient = require('mongodb').MongoClient;
+const formatData =  (data, state, message = '请求成功') => {
+  return { data, state, message }
+}
 class dbtools{
-    constructor(url,library) {
-      this.url = url
+    constructor(library) {
+      this.url = ''
       this.library = library
     }
     godb(table) {
@@ -13,21 +16,17 @@ class dbtools{
             })
         })
     }
-  }
-const formatData =  (data, state, message = '请求成功') => {
-    return { data, state, message }
-}
-// 同步插入方法
-const inser = async (result,theWay, data) => {
-    return new Promise((resolve, reject)=> {
-      result[theWay](data,(err,res)=>{
-        if (err) reject (err);
-        resolve()
+    // 同步插入方法
+    async inser(db,theWay, data) {
+      return new Promise((resolve, reject)=> {
+        db[theWay](data,(err,res)=>{
+          if (err) reject (err);
+          resolve()
+        })
       })
-    })
+    }
   }
 module.exports = {
     formatData,
     dbtools,
-    inser
 }
