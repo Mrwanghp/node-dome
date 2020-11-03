@@ -17,7 +17,17 @@ class dbtools{
 const formatData =  (data, state, message = '请求成功') => {
     return { data, state, message }
 }
+// 同步插入方法
+const inser = async (result,theWay, data) => {
+    return new Promise((resolve, reject)=> {
+      result[theWay](data,(err,res)=>{
+        if (err) reject (err);
+        resolve()
+      })
+    })
+  }
 module.exports = {
     formatData,
-    dbtools
+    dbtools,
+    inser
 }

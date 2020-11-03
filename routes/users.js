@@ -6,11 +6,11 @@ const router = require('koa-router')()
 const utils = require('../utils')
 const jwt = require('jsonwebtoken')
 const MongoClient = require('mongodb').MongoClient;
-const mongodb = new utils.dbtools('mongodb://47.100.200.134:27017/','DEMO')
+const mongodb = new utils.dbtools('','DEMO')
 router.prefix('/users')
 const findDataTable =  (library,table)  => {
   return new Promise((resolve, reject) => {
-    MongoClient.connect('mongodb://47.100.200.134:27017/', { useNewUrlParser: true, useUnifiedTopology: true }, (err, db) => {
+    MongoClient.connect('', { useNewUrlParser: true, useUnifiedTopology: true }, (err, db) => {
       if (err) reject (err);
       var dbo = db.db(library);
       dbo.collection(table).find().toArray((err, result) => {
@@ -21,16 +21,8 @@ const findDataTable =  (library,table)  => {
     });
   })
 }
-// 同步插入方法
-const inser = async (result,theWay, data) => {
-  return new Promise((resolve, reject)=> {
-    result[theWay](data,(err,res)=>{
-      if (err) reject (err);
-      console.log(11)
-      resolve()
-    })
-  })
-}
+
+//登陆
 router.post('/login',  async (ctx, next)  => {
   let body;
   const { username, password } = ctx.request.body;
@@ -57,23 +49,33 @@ router.post('/login',  async (ctx, next)  => {
   }
   ctx.body = body
 })
+//注册
 router.post('/registered',  async (ctx, next) =>{
   const { username, password,secretSecurity } = ctx.request.body;
   try {
     // 插入账号密码
     {
       let { result } = await mongodb.godb('userInfo');
-      await inser(result,'insertOne',{username,password})
+      await utils.inser(result,'insertOne',{username,password})
     }
     // 插入问题与答案
     {
       let { result, db } = await mongodb.godb('querstion');
-      await inser(result,'insertMany',secretSecurity);
+      await utils.inser(result,'insertMany',secretSecurity.map(v => ({ ...v, username} )));
       db.close();
     }
     ctx.body = utils.formatData({}, true, '注册成功')
   } catch(e) {
     throw e
   }
+})
+//找回密码
+router.post('/retrievPassword',  async (ctx, next) =>{
+  const { username } = ctx.request.body;
+  let { result, db } = await mongodb.godb('querstion');
+  result.find({username}).toArray((err,result)=>{
+    console.log(result)
+    db.close();
+  })
 })
 module.exports = router
