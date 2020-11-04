@@ -1,7 +1,7 @@
 // 单独的创建一个中间件，然后在app.js中注册使用
 const jwt = require('jsonwebtoken');
 const utils = require('../utils');
-const noCheckLogin = ['/users/login','/users/registered','/users/retrievPassword'];
+const noCheckLogin = ['/users/login','/users/registered', '/users/findQuestion', '/users/verification', '/users/modifyPassword'];
 async function check(ctx, next) {
     let url = ctx.url.split('?')[0];
     if (noCheckLogin.includes(url)) {

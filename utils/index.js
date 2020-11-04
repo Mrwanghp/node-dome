@@ -8,6 +8,7 @@ class dbtools{
       this.url = 'mongodb://localhost:27017/'
       this.library = library
     }
+    //mogon实例
     godb(table) {
         return new Promise((resolve,reject) => {
             MongoClient.connect(this.url, { useNewUrlParser: true, useUnifiedTopology: true },  (err, db) =>  {
@@ -17,12 +18,37 @@ class dbtools{
         })
     }
     // 同步插入方法
-    async inser(db,theWay, data) {
-      return new Promise((resolve, reject)=> {
-        db[theWay](data,(err,res)=>{
+    async inser(table, theWay, data) {
+      return new Promise(async (resolve, reject)=> {
+        let { result , db } = await this.godb(table);
+        result[theWay](data,(err,result)=>{
           if (err) reject (err);
-          resolve()
+          resolve(result);
+          db.close();
         })
+      })
+    }
+    // 同步查询
+    findData(table, data = {}) {
+      return new Promise(async (resolve, reject) => {
+        let { result , db } = await this.godb(table);
+            result.find(data).toArray((err, result) => {
+              if (err) reject(err);
+              resolve(result);
+              db.close();
+          });
+      })
+    }
+    // 修改
+    upDate(table, condition, value) {
+      return new Promise(async (resolve, reject) => {
+        console.log(condition,value)
+        let { result , db } = await this.godb(table);
+            result.updateMany(condition, {$set:  value },(err, result) => {
+              if (err) reject(err);
+              resolve(result);
+              db.close();
+          });
       })
     }
   }

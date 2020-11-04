@@ -5,16 +5,6 @@ const jwt = require('jsonwebtoken')
 const MongoClient = require('mongodb').MongoClient;
 router.prefix('/users')
 const mongodb = new utils.dbtools('DEMO')
-const findDataTable = (table)  => {
-  return new Promise(async (resolve, reject) => {
-    let { result , db } = await mongodb.godb(table);
-        result.find().toArray((err, result) => {
-          if (err) reject(err);
-          resolve(result);
-          db.close();
-      });
-  })
-}
 //登陆
 router.post('/login',  async (ctx, next)  => {
   let body;
@@ -27,7 +17,7 @@ router.post('/login',  async (ctx, next)  => {
     username: username,
     // token：解析token的标识
   }, '3838438')
-  const user =  await findDataTable('userInfo');
+  const user =  await mongodb.findData('userInfo');
   console.log(user)
   const usernameList = user.map(item => item.username);
   const passwordList = user.map(item => item.password);
@@ -35,10 +25,10 @@ router.post('/login',  async (ctx, next)  => {
     if (passwordList.includes(password)) {
       body = utils.formatData({ token }, true)
     } else {
-      body = utils.formatData({}, false, '密码有误请重新输入！')
+      body = utils.formatData({}, false, '密码有误请重新输入')
     }
   } else {
-    body = utils.formatData({}, false, '账号有误请重新输入！')
+    body = utils.formatData({}, false, '账号有误请重新输入')
   }
   ctx.body = body
 })
@@ -46,15 +36,17 @@ router.post('/login',  async (ctx, next)  => {
 router.post('/registered',  async (ctx, next) =>{
   try{
     const { username, password, secretSecurity } = ctx.request.body;
-    const user =  await findDataTable('userInfo');
+    const user =  await mongodb.findData('userInfo');
     const flag = user.some(item => item.username === username); //查重
     if (!flag) {
-      const { result: userInfo} = await mongodb.godb('userInfo'); //user表
-      await mongodb.inser(userInfo,'insertOne',{ username, password});
-      const { result: querstion, db } = await mongodb.godb('querstion'); //问题表
-      await mongodb.inser(querstion,'insertMany',secretSecurity.map(v => ({ ...v, username} )));
-      ctx.body = utils.formatData({}, true, '注册成功');
-      db.close();
+      try {
+        const userInfo = await mongodb.inser('userInfo','insertOne',{ username, password});
+        const querstion = await mongodb.inser('querstion','insertMany',secretSecurity.map(v => ({ ...v, username} )));
+        const status =  userInfo.insertedCount && querstion.insertedCount;
+        ctx.body = utils.formatData({},Boolean(status), status ? '注册成功' : '注册失败');
+      } catch(err) {
+        console.log("错误：" + err.message);
+      }
     } else {
       ctx.body = utils.formatData({}, false, '账号名重复');
     }
@@ -65,37 +57,33 @@ router.post('/registered',  async (ctx, next) =>{
 //找回密码--查询问题
 router.post('/findQuestion',  async (ctx, next) =>{
   const { username } = ctx.request.body;
-  let { result, db } = await mongodb.godb('querstion');
-  result.find({username}).toArray((err,res)=>{
-    const querstion = res.map(item => item.querstion);
-    if (res.length) {
-      ctx.body = utils.formatData({ querstion }, true)
-    } else {
-      ctx.body = utils.formatData({}, false, '账号有误请重新输入！')
-    }
-    db.close();
-  })
+  const result =  await mongodb.findData('querstion',{ username });
+  const querstion = result.map(item => item.querstion);
+  if (result.length) {
+    ctx.body = utils.formatData({ querstion }, true)
+  } else {
+    ctx.body = utils.formatData({}, false, '账号有误请重新输入')
+  }
 })
 //找回密码--验证问题
 router.post('/verification',  async (ctx, next) =>{
   const { username , secretSecurity } = ctx.request.body;
-  let { result, db } = await mongodb.godb('querstion');
-  result.find({username}).toArray(( err, res)=>{
-   if (JSON.stringify(secretSecurity) === JSON.stringify(res.map(v=>{ v.querstion, v.answer}))) {
-      ctx.body = utils.formatData({}, true, '验证成功')
-   } else {
-      ctx.body = utils.formatData({}, false, '验证失败')
-   }
-   db.close();
-  })
+  const result =  await mongodb.findData('querstion',{ username });
+  const querstion = JSON.stringify(result.map(v=> ({ querstion: v.querstion, answer: v.answer})));
+  if (JSON.stringify(secretSecurity) === querstion) {
+    ctx.body = utils.formatData({}, true, '验证成功')
+  } else {
+    ctx.body = utils.formatData({}, false, '验证失败')
+  }
 })
 //找回密码--修改密码
 router.post('/modifyPassword',  async (ctx, next) =>{
   const { username, password } = ctx.request.body;
-  let { result, db } = await mongodb.godb('querstion');
-  result.updateOne({username},{$set: { password }}).toArray(( err, res)=>{
+  let result = await mongodb.upDate('userInfo', { username }, { password });
+  if (result.result.nModified) {
     ctx.body = utils.formatData({}, true, '密码修改成功')
-    db.close();
-  })
+  } else {
+    ctx.body = utils.formatData({}, true, '密码修改失败')
+  }
 })
 module.exports = router
